@@ -1,10 +1,9 @@
--- ⚡ CLZ ULTRA FARM | 32/QUADRO + SEM KICK + SEM REINICIAR
+-- ⚡ CLZ ULTRA FARM | 32/QUADRO + SEM KICK + ANTI-AFK 24/7 COMPLETO
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
-local TweenService = game:GetService("TweenService")
 
 if not game:IsLoaded() then game.Loaded:Wait() end
 local player = Players.LocalPlayer
@@ -25,19 +24,34 @@ BuscarEventos()
 local isFarming = false
 local AutoRebirth = false
 local GraficosOtimizados = false
+local AntiAfkAtivo = true
 
--- ✅ 32 POR QUADRO + PROTEÇÃO = RÁPIDO E ESTÁVEL
 local REPS_POR_QUADRO = 32
-local LIMITE_SEGURANCA = 1900 -- não passa disso por segundo
+local LIMITE_SEGURANCA = 1900
 local Minimizado = false
 local Encerrado = false
-
--- Contador pra não acumular tráfego
 local contadorAcoes = 0
 local ultimoReset = tick()
 
 ----------------------------------------------------------------
--- ⚡ OTIMIZAÇÃO TOTAL — TIRA TODO LAG
+-- ⚡ ANTI-AFK — NUNCA DESCONECTA
+----------------------------------------------------------------
+task.spawn(function()
+    while not Encerrado do
+        if AntiAfkAtivo then
+            pcall(function()
+                local char = player.Character
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    char.HumanoidRootPart.CFrame *= CFrame.new(0, 0.001, 0)
+                end
+            end)
+        end
+        task.wait(45)
+    end
+end)
+
+----------------------------------------------------------------
+-- OTIMIZAÇÃO
 ----------------------------------------------------------------
 local graficosOriginais = {
     GlobalShadows = Lighting.GlobalShadows,
@@ -46,52 +60,32 @@ local graficosOriginais = {
     OutdoorAmbient = Lighting.OutdoorAmbient,
     Technology = Lighting.Technology
 }
-local efeitosSalvos = {}
-local partesComTextura = {}
+local efeitosSalvos, partesComTextura = {}, {}
 
 local function DesligarTudoPesado()
     if GraficosOtimizados then return end
     GraficosOtimizados = true
-
-    efeitosSalvos = {}
     for _, e in ipairs(Lighting:GetChildren()) do
-        if e:IsA("BloomEffect") or e:IsA("BlurEffect") or e:IsA("SunRaysEffect") 
-        or e:IsA("DepthOfFieldEffect") or e:IsA("ColorCorrectionEffect") then
+        if e:IsA("BloomEffect") or e:IsA("BlurEffect") or e:IsA("SunRaysEffect") or e:IsA("DepthOfFieldEffect") or e:IsA("ColorCorrectionEffect") then
             efeitosSalvos[e] = {Enabled = e.Enabled}
             e.Enabled = false
         end
     end
-
     Lighting.GlobalShadows = false
     Lighting.ShadowSoftness = 0
-    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+    Lighting.Ambient = Color3.fromRGB(255,255,255)
+    Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
     Lighting.Brightness = 2
     Lighting.Technology = Enum.Technology.Compatibility
-
-    partesComTextura = {}
     pcall(function()
         for _, d in ipairs(workspace:GetDescendants()) do
             if d:IsA("BasePart") then
-                partesComTextura[d] = {Texture = d.Texture, CastShadow = d.CastShadow}
-                d.CastShadow = false
-                d.Texture = ""
+                partesComTextura[d] = {CastShadow = d.CastShadow, Texture = d.Texture}
+                d.CastShadow = false; d.Texture = ""
             elseif d:IsA("Decal") or d:IsA("Texture") then
                 partesComTextura[d] = {Transparency = d.Transparency}
                 d.Transparency = 1
             end
-        end
-    end)
-
-    task.spawn(function()
-        while GraficosOtimizados and not Encerrado do
-            pcall(function()
-                for _, d in ipairs(workspace:GetDescendants()) do
-                    if d:IsA("BasePart") then d.CastShadow = false end
-                    if d:IsA("Decal") or d:IsA("Texture") then d.Transparency = 1 end
-                end
-            end)
-            task.wait(0.3)
         end
     end)
 end
@@ -104,12 +98,12 @@ local function RestaurarTudo()
     Lighting.Ambient = graficosOriginais.Ambient
     Lighting.OutdoorAmbient = graficosOriginais.OutdoorAmbient
     Lighting.Technology = graficosOriginais.Technology
-    for e, estado in pairs(efeitosSalvos) do if e then e.Enabled = estado.Enabled end end
-    for d, estado in pairs(partesComTextura) do
+    for e, s in pairs(efeitosSalvos) do if e then e.Enabled = s.Enabled end end
+    for d, s in pairs(partesComTextura) do
         if not d then continue end
         pcall(function()
-            if d:IsA("BasePart") then d.CastShadow = estado.CastShadow; if estado.Texture then d.Texture = estado.Texture end
-            elseif d:IsA("Decal") or d:IsA("Texture") then d.Transparency = estado.Transparency end
+            if d:IsA("BasePart") then d.CastShadow = s.CastShadow; if s.Texture then d.Texture = s.Texture end
+            else d.Transparency = s.Transparency end
         end)
     end
 end
@@ -163,54 +157,40 @@ local function equipRareBossPets()
 end
 
 ----------------------------------------------------------------
--- ⚡ FARM — 32/QUADRO + PROTEÇÃO DE TRÁFEGO
+-- FARM
 ----------------------------------------------------------------
 local farmConnection = nil
 local function PararFarm()
     isFarming = false
-    if farmConnection then farmConnection:Disconnect() farmConnection = nil end
-    contadorAcoes = 0
-    ultimoReset = tick()
+    if farmConnection then farmConnection:Disconnect(); farmConnection = nil end
+    contadorAcoes = 0; ultimoReset = tick()
 end
 local function IniciarFarm()
     if farmConnection then return end
     BuscarEventos()
     if not muscleEvent then return end
     isFarming = true
-    contadorAcoes = 0
-    ultimoReset = tick()
-    
+    contadorAcoes = 0; ultimoReset = tick()
     farmConnection = RunService.Heartbeat:Connect(function()
         if not isFarming or Encerrado or not muscleEvent then return end
-        
-        -- ✅ RESETA CONTADOR A CADA SEGUNDO
-        if tick() - ultimoReset >= 1 then
-            contadorAcoes = 0
-            ultimoReset = tick()
-        end
-        
-        -- ✅ PARA SE PASSAR DO LIMITE SEGURO
+        if tick() - ultimoReset >= 1 then contadorAcoes = 0; ultimoReset = tick() end
         if contadorAcoes >= LIMITE_SEGURANCA then return end
-        
-        -- ✅ CALCULA QUANTIDADE SEM EXCEDER
-        local quantoFazer = math.min(REPS_POR_QUADRO, LIMITE_SEGURANCA - contadorAcoes)
-        
-        for _ = 1, quantoFazer do
+        local qtd = math.min(REPS_POR_QUADRO, LIMITE_SEGURANCA - contadorAcoes)
+        for _ = 1, qtd do
             pcall(function() muscleEvent:FireServer("rep") end)
-            contadorAcoes = contadorAcoes + 1
+            contadorAcoes += 1
         end
     end)
 end
 
 ----------------------------------------------------------------
--- ⚡ RENASCIMENTO — SEM COOLDOWN + ESTÁVEL
+-- RENASCIMENTO
 ----------------------------------------------------------------
 local RebirthConnection = nil
 local function PararRenascimento()
     AutoRebirth = false
-    if RebirthConnection then RebirthConnection:Disconnect() RebirthConnection = nil end
+    if RebirthConnection then RebirthConnection:Disconnect(); RebirthConnection = nil end
 end
-
 local function TentarRenascer()
     pcall(function()
         for _, gui in ipairs(playerGui:GetChildren()) do
@@ -228,13 +208,12 @@ local function TentarRenascer()
         task.spawn(function()
             pcall(function()
                 rebirthRemote:InvokeServer("rebirthRequest")
-                task.wait(0.15) -- espaçamento estável
+                task.wait(0.15)
                 rebirthRemote:FireServer("rebirthRequest")
             end)
         end)
     end
 end
-
 local function IniciarRenascimento()
     if RebirthConnection then return end
     AutoRebirth = true
@@ -242,9 +221,7 @@ local function IniciarRenascimento()
         if not AutoRebirth or Encerrado then return end
         local leaderstats = player:FindFirstChild("leaderstats")
         local strength = leaderstats and leaderstats:FindFirstChild("Strength")
-        if strength and strength.Value > 0 then
-            TentarRenascer()
-        end
+        if strength and strength.Value > 0 then TentarRenascer() end
     end)
 end
 
@@ -262,18 +239,19 @@ local function formatNumber(n)
 end
 
 ----------------------------------------------------------------
--- 📱 INTERFACE — TUDO IGUAL
+-- INTERFACE COMPLETA
 ----------------------------------------------------------------
-local AZUL_ESCURO = Color3.fromRGB(15, 23, 42)
-local AZUL_BASE = Color3.fromRGB(59, 130, 246)
-local AZUL_BRILHANTE = Color3.fromRGB(96, 165, 250)
-local SUCESSO_VERDE = Color3.fromRGB(16, 185, 129)
-local ERRO_VERMELHO = Color3.fromRGB(239, 68, 68)
-local FECHAR_VERMELHO = Color3.fromRGB(220, 38, 38)
-local REBIRTH_ROXO = Color3.fromRGB(168, 85, 247)
-local BRANCO = Color3.fromRGB(255, 255, 255)
-local CINZA = Color3.fromRGB(200, 200, 200)
-local OTIMIZAR_VERDE = Color3.fromRGB(52, 211, 153)
+local AZUL_ESCURO = Color3.fromRGB(15,23,42)
+local AZUL_BASE = Color3.fromRGB(59,130,246)
+local AZUL_BRILHANTE = Color3.fromRGB(96,165,250)
+local SUCESSO_VERDE = Color3.fromRGB(16,185,129)
+local ERRO_VERMELHO = Color3.fromRGB(239,68,68)
+local FECHAR_VERMELHO = Color3.fromRGB(220,38,38)
+local REBIRTH_ROXO = Color3.fromRGB(168,85,247)
+local BRANCO = Color3.fromRGB(255,255,255)
+local CINZA = Color3.fromRGB(200,200,200)
+local OTIMIZAR_VERDE = Color3.fromRGB(52,211,153)
+local AFK_VERDE = Color3.fromRGB(34,197,94)
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CLZ_ULTRA_FARM"
@@ -283,42 +261,42 @@ screenGui.Parent = playerGui
 
 local miniButton = Instance.new("TextButton")
 miniButton.Name = "MiniButton"
-miniButton.Size = UDim2.new(0, 52, 0, 52)
-miniButton.Position = UDim2.new(0, 185, 0, 55)
-miniButton.BackgroundColor3 = Color3.fromRGB(15, 82, 186)
+miniButton.Size = UDim2.new(0,52,0,52)
+miniButton.Position = UDim2.new(0,185,0,55)
+miniButton.BackgroundColor3 = Color3.fromRGB(15,82,186)
 miniButton.Text = "CLZ"
 miniButton.TextColor3 = BRANCO
 miniButton.TextSize = 24
 miniButton.Font = Enum.Font.GothamBlack
 miniButton.Visible = false
 miniButton.Parent = screenGui
-Instance.new("UICorner", miniButton).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", miniButton).CornerRadius = UDim.new(0,12)
 local miniStroke = Instance.new("UIStroke")
 miniStroke.Color = AZUL_BRILHANTE
 miniStroke.Thickness = 3
 miniStroke.Parent = miniButton
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 310, 0, 350)
-frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+frame.Size = UDim2.new(0,310,0,375)
+frame.AnchorPoint = Vector2.new(0.5,0.5)
+frame.Position = UDim2.new(0.5,0,0.5,0)
 frame.BackgroundColor3 = AZUL_ESCURO
 frame.Parent = screenGui
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,16)
 local stroke = Instance.new("UIStroke")
 stroke.Color = AZUL_BRILHANTE
 stroke.Thickness = 2
 stroke.Parent = frame
 
 local topBar = Instance.new("Frame")
-topBar.Size = UDim2.new(1, 0, 0, 40)
-topBar.BackgroundColor3 = Color3.fromRGB(30, 41, 59)
+topBar.Size = UDim2.new(1,0,0,40)
+topBar.BackgroundColor3 = Color3.fromRGB(30,41,59)
 topBar.Parent = frame
-Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 16)
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0,16)
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -85, 1, 0)
-title.Position = UDim2.new(0, 12, 0, 0)
+title.Size = UDim2.new(1,-85,1,0)
+title.Position = UDim2.new(0,12,0,0)
 title.BackgroundTransparency = 1
 title.Text = "⚡ CLZ ULTRA FARM"
 title.TextColor3 = AZUL_BRILHANTE
@@ -328,30 +306,30 @@ title.TextXAlignment = Enum.TextXAlignment.Left
 title.Parent = topBar
 
 local BtnMin = Instance.new("TextButton")
-BtnMin.Size = UDim2.new(0, 34, 0, 32)
-BtnMin.Position = UDim2.new(1, -76, 0, 4)
+BtnMin.Size = UDim2.new(0,34,0,32)
+BtnMin.Position = UDim2.new(1,-76,0,4)
 BtnMin.Text = "−"
 BtnMin.Font = Enum.Font.GothamBold
 BtnMin.TextSize = 20
 BtnMin.TextColor3 = BRANCO
-BtnMin.BackgroundColor3 = Color3.fromRGB(51, 65, 85)
+BtnMin.BackgroundColor3 = Color3.fromRGB(51,65,85)
 BtnMin.Parent = topBar
-Instance.new("UICorner", BtnMin).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", BtnMin).CornerRadius = UDim.new(0,8)
 
 local BtnFechar = Instance.new("TextButton")
-BtnFechar.Size = UDim2.new(0, 34, 0, 32)
-BtnFechar.Position = UDim2.new(1, -38, 0, 4)
+BtnFechar.Size = UDim2.new(0,34,0,32)
+BtnFechar.Position = UDim2.new(1,-38,0,4)
 BtnFechar.Text = "✕"
 BtnFechar.Font = Enum.Font.GothamBold
 BtnFechar.TextSize = 18
 BtnFechar.TextColor3 = BRANCO
 BtnFechar.BackgroundColor3 = FECHAR_VERMELHO
 BtnFechar.Parent = topBar
-Instance.new("UICorner", BtnFechar).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", BtnFechar).CornerRadius = UDim.new(0,8)
 
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(1, -24, 0, 22)
-status.Position = UDim2.new(0, 12, 0, 52)
+status.Size = UDim2.new(1,-24,0,22)
+status.Position = UDim2.new(0,12,0,52)
 status.BackgroundTransparency = 1
 status.Text = "🔴 FARM PAUSADO"
 status.TextColor3 = ERRO_VERMELHO
@@ -361,8 +339,8 @@ status.TextXAlignment = Enum.TextXAlignment.Left
 status.Parent = frame
 
 local rebirthStatus = Instance.new("TextLabel")
-rebirthStatus.Size = UDim2.new(1, -24, 0, 22)
-rebirthStatus.Position = UDim2.new(0, 12, 0, 76)
+rebirthStatus.Size = UDim2.new(1,-24,0,22)
+rebirthStatus.Position = UDim2.new(0,12,0,76)
 rebirthStatus.BackgroundTransparency = 1
 rebirthStatus.Text = "🔴 RENASCIMENTO DESLIGADO"
 rebirthStatus.TextColor3 = ERRO_VERMELHO
@@ -371,9 +349,20 @@ rebirthStatus.Font = Enum.Font.GothamBold
 rebirthStatus.TextXAlignment = Enum.TextXAlignment.Left
 rebirthStatus.Parent = frame
 
+local afkStatus = Instance.new("TextLabel")
+afkStatus.Size = UDim2.new(1,-24,0,22)
+afkStatus.Position = UDim2.new(0,12,0,100)
+afkStatus.BackgroundTransparency = 1
+afkStatus.Text = "🟢 ANTI-AFK ATIVO • NUNCA DESCONECTA"
+afkStatus.TextColor3 = AFK_VERDE
+afkStatus.TextSize = 13
+afkStatus.Font = Enum.Font.GothamBold
+afkStatus.TextXAlignment = Enum.TextXAlignment.Left
+afkStatus.Parent = frame
+
 local strengthLabel = Instance.new("TextLabel")
-strengthLabel.Size = UDim2.new(1, -24, 0, 36)
-strengthLabel.Position = UDim2.new(0, 12, 0, 100)
+strengthLabel.Size = UDim2.new(1,-24,0,36)
+strengthLabel.Position = UDim2.new(0,12,0,124)
 strengthLabel.BackgroundTransparency = 1
 strengthLabel.Text = "FORÇA: 0"
 strengthLabel.TextColor3 = BRANCO
@@ -383,8 +372,8 @@ strengthLabel.TextXAlignment = Enum.TextXAlignment.Left
 strengthLabel.Parent = frame
 
 local sessionLabel = Instance.new("TextLabel")
-sessionLabel.Size = UDim2.new(1, -24, 0, 18)
-sessionLabel.Position = UDim2.new(0, 12, 0, 140)
+sessionLabel.Size = UDim2.new(1,-24,0,18)
+sessionLabel.Position = UDim2.new(0,12,0,166)
 sessionLabel.BackgroundTransparency = 1
 sessionLabel.Text = "⏱️ 00:00:00"
 sessionLabel.TextColor3 = CINZA
@@ -394,43 +383,44 @@ sessionLabel.TextXAlignment = Enum.TextXAlignment.Left
 sessionLabel.Parent = frame
 
 local BotaoGrafico = Instance.new("TextButton")
-BotaoGrafico.Size = UDim2.new(1, -24, 0, 38)
-BotaoGrafico.Position = UDim2.new(0, 12, 0, 168)
+BotaoGrafico.Size = UDim2.new(1,-24,0,38)
+BotaoGrafico.Position = UDim2.new(0,12,0,194)
 BotaoGrafico.Text = "📉 TIRAR TODO LAG"
 BotaoGrafico.Font = Enum.Font.GothamBold
 BotaoGrafico.TextSize = 14
 BotaoGrafico.TextColor3 = BRANCO
-BotaoGrafico.BackgroundColor3 = Color3.fromRGB(107, 114, 128)
+BotaoGrafico.BackgroundColor3 = Color3.fromRGB(107,114,128)
 BotaoGrafico.Parent = frame
-Instance.new("UICorner", BotaoGrafico).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", BotaoGrafico).CornerRadius = UDim.new(0,10)
 
 local BotaoToggle = Instance.new("TextButton")
-BotaoToggle.Size = UDim2.new(1, -24, 0, 42)
-BotaoToggle.Position = UDim2.new(0, 12, 0, 214)
+BotaoToggle.Size = UDim2.new(1,-24,0,42)
+BotaoToggle.Position = UDim2.new(0,12,0,240)
 BotaoToggle.Text = "▶️ LIGAR FARM"
 BotaoToggle.Font = Enum.Font.GothamBold
 BotaoToggle.TextSize = 16
 BotaoToggle.TextColor3 = BRANCO
 BotaoToggle.BackgroundColor3 = AZUL_BASE
 BotaoToggle.Parent = frame
-Instance.new("UICorner", BotaoToggle).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", BotaoToggle).CornerRadius = UDim.new(0,12)
 
 local BotaoRebirth = Instance.new("TextButton")
-BotaoRebirth.Size = UDim2.new(1, -24, 0, 42)
-BotaoRebirth.Position = UDim2.new(0, 12, 0, 266)
+BotaoRebirth.Size = UDim2.new(1,-24,0,42)
+BotaoRebirth.Position = UDim2.new(0,12,0,292)
 BotaoRebirth.Text = "🔄 LIGAR RENASCIMENTO"
 BotaoRebirth.Font = Enum.Font.GothamBold
 BotaoRebirth.TextSize = 16
 BotaoRebirth.TextColor3 = BRANCO
 BotaoRebirth.BackgroundColor3 = REBIRTH_ROXO
 BotaoRebirth.Parent = frame
-Instance.new("UICorner", BotaoRebirth).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", BotaoRebirth).CornerRadius = UDim.new(0,12)
 
 ----------------------------------------------------------------
--- FUNÇÕES
+-- FUNÇÕES DE CONTROLE
 ----------------------------------------------------------------
 local function FecharScript()
     Encerrado = true
+    AntiAfkAtivo = false
     PararFarm()
     PararRenascimento()
     RestaurarTudo()
@@ -448,7 +438,6 @@ BtnMin.MouseButton1Click:Connect(function()
     Minimizado = true
     AtualizarMinimizado()
 end)
-
 miniButton.MouseButton1Click:Connect(function()
     Minimizado = false
     AtualizarMinimizado()
@@ -459,7 +448,7 @@ local AlternarGrafico = function()
     if GraficosOtimizados then
         RestaurarTudo()
         BotaoGrafico.Text = "📉 TIRAR TODO LAG"
-        BotaoGrafico.BackgroundColor3 = Color3.fromRGB(107, 114, 128)
+        BotaoGrafico.BackgroundColor3 = Color3.fromRGB(107,114,128)
     else
         DesligarTudoPesado()
         BotaoGrafico.Text = "✅ LAG TIRADO TOTALMENTE"
